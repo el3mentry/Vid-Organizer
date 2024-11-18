@@ -162,21 +162,21 @@ function App() {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-gray-900 to-gray-800 p-8">
-      <div className="max-w-7xl mx-auto bg-white/10 backdrop-blur-lg rounded-xl shadow-2xl overflow-hidden">
-        <div className="p-8">
-          <h1 className="text-4xl font-bold text-white mb-8 flex items-center gap-3">
-            <FolderOpen className="w-10 h-10" />
+    <div className="min-h-screen bg-gradient-to-br from-gray-900 to-gray-800 p-4">
+      <div className="max-w-6xl mx-auto bg-white/10 backdrop-blur-lg rounded-xl shadow-2xl overflow-hidden">
+        <div className="p-6">
+          <h1 className="text-3xl font-bold text-white mb-6 flex items-center gap-3">
+            <FolderOpen className="w-8 h-8" />
             Video Organizer
           </h1>
 
           {error && (
-            <div className="mb-8 p-4 bg-red-500/20 border border-red-500 rounded-lg text-red-100">
+            <div className="mb-6 p-3 bg-red-500/20 border border-red-500 rounded-lg text-red-100">
               {error}
             </div>
           )}
 
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-8 mb-12">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
             <DirectorySelector
               label="Source Directory"
               value={sourceDir}
@@ -203,19 +203,20 @@ function App() {
           )}
 
           {videos.length > 0 && !isProcessing && (
-            <div className="space-y-8">
-              <div className="bg-gray-800/50 p-6 rounded-xl">
-                <h2 className="text-xl font-semibold text-white mb-4 flex items-center gap-2">
-                  <Play className="w-6 h-6" />
+            <div className="space-y-6">
+              <div className="bg-gray-800/50 p-4 rounded-xl">
+                <h2 className="text-lg font-semibold text-white mb-3 flex items-center gap-2">
                   Current Video: {getCurrentVideoName()}
                 </h2>
-                <VideoPlayer
-                  src={getCurrentVideoPath()}
-                  className="w-full aspect-video bg-black rounded-lg"
-                />
+                <div className="max-w-3xl mx-auto">
+                  <VideoPlayer
+                    src={getCurrentVideoPath()}
+                    className="w-full aspect-video bg-black rounded-lg"
+                  />
+                </div>
               </div>
 
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 <div className="space-y-4">
                   <label className="block text-lg font-medium text-white">New File Name</label>
                   <input
@@ -237,7 +238,7 @@ function App() {
                 />
               </div>
 
-              <div className="flex justify-between">
+              <div className="flex justify-between mt-6">
                 <button
                   onClick={handleMoveVideo}
                   disabled={isProcessing || !selectedCategory || !newFileName || !targetDir}
