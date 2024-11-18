@@ -3,6 +3,7 @@ import { FolderOpen, Play, Forward, Save, Plus, Move } from 'lucide-react';
 import VideoPlayer from './components/VideoPlayer';
 import CategorySelector from './components/CategorySelector';
 import DirectorySelector from './components/DirectorySelector';
+import Notification from './components/Notification';
 import { VideoFile, ElectronAPI } from './types/electron';
 
 declare global {
@@ -21,6 +22,8 @@ function App() {
   const [newFileName, setNewFileName] = useState('');
   const [isProcessing, setIsProcessing] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [showNotification, setShowNotification] = useState(false);
+  const [notificationMessage, setNotificationMessage] = useState('');
 
   useEffect(() => {
     fetchCategories();
@@ -99,6 +102,10 @@ function App() {
         // Remove the moved video from the list
         setVideos(prev => prev.filter((_, index) => index !== currentVideoIndex));
         
+        // Show success notification
+        setNotificationMessage(`Successfully moved video to ${selectedCategory}`);
+        setShowNotification(true);
+        
         setSelectedCategory('');
         // Adjust current index if necessary
         if (currentVideoIndex >= videos.length - 1) {
@@ -164,7 +171,12 @@ function App() {
   return (
     <div className="min-h-screen bg-gradient-to-br from-gray-900 to-gray-800 p-4">
       <div className="max-w-6xl mx-auto bg-white/10 backdrop-blur-lg rounded-xl shadow-2xl overflow-hidden">
-        <div className="p-6">
+        <div className="p-6 relative">
+          <Notification
+            message={notificationMessage}
+            show={showNotification}
+            onHide={() => setShowNotification(false)}
+          />
           <h1 className="text-3xl font-bold text-white mb-6 flex items-center gap-3">
             <FolderOpen className="w-8 h-8" />
             Video Organizer
