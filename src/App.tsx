@@ -252,21 +252,21 @@ function App() {
 
               <div className="flex justify-between mt-6">
                 <button
-                  onClick={handleMoveVideo}
-                  disabled={isProcessing || !selectedCategory || !newFileName || !targetDir}
-                  className="px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-500 transition-colors flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
+                  onClick={handleNextVideo}
+                  disabled={isProcessing || currentVideoIndex >= videos.length - 1}
+                  className="px-4 py-2 bg-gray-700 text-white rounded-lg hover:bg-gray-600 transition-colors flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed text-sm"
                 >
-                  <Move className="w-5 h-5" />
-                  Move Video
+                  <Forward className="w-4 h-4" />
+                  Next Video
                 </button>
 
                 <button
-                  onClick={handleNextVideo}
-                  disabled={isProcessing || currentVideoIndex >= videos.length - 1}
-                  className="px-6 py-3 bg-gray-700 text-white rounded-lg hover:bg-gray-600 transition-colors flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
+                  onClick={handleMoveVideo}
+                  disabled={isProcessing || !selectedCategory || !newFileName || !targetDir}
+                  className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-500 transition-colors flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed text-sm"
                 >
-                  <Forward className="w-5 h-5" />
-                  Next Video
+                  <Move className="w-4 h-4" />
+                  Move Video
                 </button>
               </div>
             </div>
