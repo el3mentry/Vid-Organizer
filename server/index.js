@@ -126,6 +126,101 @@ app.post('/api/organize', async (req, res) => {
   }
 });
 
+const videoExtensions = ['.mp4', '.avi', '.mkv', '.mov', '.wmv', '.flv', '.webm'];
+
+// Recursive function to get all video files from a directory and its subdirectories
+async function getVideoFilesRecursively(dir) {
+  const videoFiles = [];
+  
+  async function scanDirectory(currentDir) {
+    try {
+      const files = await fs.readdir(currentDir, { withFileTypes: true });
+      
+      for (const file of files) {
+        const fullPath = path.join(currentDir, file.name);
+        
+        if (file.isDirectory()) {
+          // Recursively scan subdirectories
+          await scanDirectory(fullPath);
+        } else if (file.isFile()) {
+          // Check if file has a video extension
+          const ext = path.extname(file.name).toLowerCase();
+          if (videoExtensions.includes(ext)) {
+            try {
+              const stats = await fs.stat(fullPath);
+              videoFiles.push({
+                path: fullPath,
+                size: stats.size,
+                createdAt: stats.birthtime
+              });
+            } catch (error) {
+              console.error(`Error getting stats for file ${fullPath}:`, error);
+            }
+          }
+        }
+      }
+    } catch (error) {
+      console.error(`Error scanning directory ${currentDir}:`, error);
+    }
+  }
+
+  await scanDirectory(dir);
+  return videoFiles;
+}
+
+app.post('/api/load-videos', async (req, res) => {
+  try {
+    const { sourceDir } = req.body;
+    if (!sourceDir) {
+      return res.status(400).json({ error: 'Source directory is required' });
+    }
+
+    console.log('Loading videos from:', sourceDir);
+    const videoFiles = await getVideoFilesRecursively(sourceDir);
+    console.log(`Found ${videoFiles.length} videos (including subdirectories)`);
+    
+    res.json({ videos: videoFiles });
+  } catch (error) {
+    console.error('Error loading videos:', error);
+    res.status(500).json({ error: 'Failed to load videos' });
+  }
+});
+
+app.post('/api/move-video', async (req, res) => {
+  try {
+    const { sourcePath, targetDir, newFileName, category } = req.body;
+
+    if (!sourcePath || !targetDir || !newFileName || !category) {
+      return res.status(400).json({ error: 'Missing required parameters' });
+    }
+
+    // Create category directory if it doesn't exist
+    const categoryDir = path.join(targetDir, category);
+    try {
+      await fs.mkdir(categoryDir, { recursive: true });
+    } catch (error) {
+      if (error.code !== 'EEXIST') {
+        throw error;
+      }
+    }
+
+    // Get file extension from source file
+    const ext = path.extname(sourcePath);
+    
+    // Create target path with new filename
+    const targetPath = path.join(categoryDir, `${newFileName}${ext}`);
+
+    // Move the file
+    await fs.rename(sourcePath, targetPath);
+    console.log(`Moved video from ${sourcePath} to ${targetPath}`);
+
+    res.json({ success: true, newPath: targetPath });
+  } catch (error) {
+    console.error('Error moving video:', error);
+    res.status(500).json({ error: 'Failed to move video' });
+  }
+});
+
 app.listen(PORT, () => {
   console.log(`Server running on port ${PORT}`);
 });

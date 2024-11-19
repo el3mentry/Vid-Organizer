@@ -205,7 +205,7 @@ app.on('window-all-closed', () => {
   }
 });
 
-// Handle directory selection
+// IPC Handlers
 ipcMain.handle('select-directory', async () => {
   const result = await dialog.showOpenDialog({
     properties: ['openDirectory']
@@ -217,39 +217,16 @@ ipcMain.handle('select-directory', async () => {
   return null;
 });
 
-// Handle video scanning
-ipcMain.handle('scan-videos', async (event, directory) => {
-  try {
-    const files = await fs.readdir(directory);
-    const videoExtensions = ['.mp4', '.mov', '.avi', '.mkv', '.webm'];
-    
-    const videoFiles = [];
-    for (const file of files) {
-      const filePath = path.join(directory, file);
-      try {
-        // Use synchronous version for stats to avoid too many open handles
-        const stats = fsSync.statSync(filePath);
-        
-        if (stats.isFile()) {
-          const ext = path.extname(file).toLowerCase();
-          if (videoExtensions.includes(ext)) {
-            videoFiles.push({
-              name: file,
-              path: filePath,
-              size: stats.size,
-              nameWithoutExt: path.parse(file).name,
-              createdAt: stats.birthtime
-            });
-          }
-        }
-      } catch (err) {
-        console.error(`Error processing file ${file}:`, err);
-      }
+// Video protocol registration
+protocol.registerSchemesAsPrivileged([
+  {
+    scheme: 'video',
+    privileges: {
+      standard: true,
+      supportFetchAPI: true,
+      stream: true,
+      secure: true,
+      corsEnabled: true
     }
-
-    return videoFiles;
-  } catch (error) {
-    console.error('Error scanning videos:', error);
-    throw error;
   }
-});
+]);
