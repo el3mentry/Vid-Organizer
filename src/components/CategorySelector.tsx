@@ -29,10 +29,6 @@ const CategorySelector: React.FC<CategorySelectorProps> = ({
 
   return (
     <div className="space-y-4">
-      <label className="block text-lg font-medium text-white">
-        Video Category
-      </label>
-      
       {isAdding ? (
         <div className="flex gap-2">
           <input
@@ -50,7 +46,7 @@ const CategorySelector: React.FC<CategorySelectorProps> = ({
               placeholder:text-gray-400
               hover:bg-gray-800/70 transition-colors
             "
-            placeholder="Enter new category"
+            placeholder="Type new category name"
             disabled={disabled}
           />
           <button
@@ -88,7 +84,7 @@ const CategorySelector: React.FC<CategorySelectorProps> = ({
             "
             disabled={disabled}
           >
-            <option value="" className="bg-gray-800 text-gray-400">Select a category</option>
+            <option value="" className="bg-gray-800 text-gray-400">Select video category</option>
             {categories.map((category) => (
               <option 
                 key={category} 

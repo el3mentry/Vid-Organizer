@@ -185,14 +185,14 @@ const App: React.FC = () => {
   return (
     <div className="min-h-screen bg-gradient-to-br from-gray-900 to-gray-800 p-4">
       <div className="max-w-6xl mx-auto bg-white/10 backdrop-blur-lg rounded-xl shadow-2xl overflow-hidden">
-        <div className="p-6 relative">
+        <div className="p-8 relative h-screen max-h-[calc(100vh-2rem)]">
           <Notification
             message={notificationMessage}
             show={showNotification}
             onHide={() => setShowNotification(false)}
           />
-          <h1 className="text-3xl font-bold text-white mb-6 flex items-center gap-3">
-            <FolderOpen className="w-8 h-8" />
+          <h1 className="text-2xl font-bold text-white mb-6 flex items-center gap-3">
+            <FolderOpen className="w-6 h-6" />
             Video Organizer
           </h1>
 
@@ -200,7 +200,7 @@ const App: React.FC = () => {
             <div className="text-red-500 mb-4">{error}</div>
           )}
           
-          <div className="flex gap-6 h-[calc(100vh-12rem)]">
+          <div className="flex gap-6 h-[calc(100vh-16rem)]">
             {/* Video Navigation Pane */}
             <div className="w-64 flex-shrink-0">
               <VideoList
@@ -231,7 +231,7 @@ const App: React.FC = () => {
                 />
               </div>
 
-              <div className="flex-1 bg-gray-800/50 backdrop-blur-md rounded-lg border border-gray-700 p-6">
+              <div className="flex-1 bg-gray-800/50 backdrop-blur-md rounded-lg border border-gray-700 p-6 flex flex-col">
                 {isProcessing && (
                   <div className="flex justify-center items-center p-8">
                     <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-white"></div>
@@ -239,11 +239,13 @@ const App: React.FC = () => {
                 )}
 
                 {videos.length > 0 && !isProcessing && (
-                  <div className="space-y-6">
-                    <div className="bg-gray-800/50 p-4 rounded-xl">
-                      <h2 className="text-lg font-semibold text-white mb-3 flex items-center gap-2">
-                        Current Video: {getCurrentVideoName()}
-                      </h2>
+                  <div className="flex flex-col h-full">
+                    {/* Video section */}
+                    <div className="flex-shrink-0 bg-gray-800/50 p-4 rounded-xl mb-6">
+                      <div className="mb-3">
+                        <span className="text-lg font-semibold text-white">Current Video:</span>
+                        <div className="text-sm text-gray-300 line-clamp-2 mt-1">{getCurrentVideoName()}</div>
+                      </div>
                       <div className="max-w-3xl mx-auto">
                         <VideoPlayer
                           src={getCurrentVideoPath()}
@@ -252,46 +254,79 @@ const App: React.FC = () => {
                       </div>
                     </div>
 
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                      <div className="space-y-4">
-                        <label className="block text-lg font-medium text-white">New File Name</label>
-                        <input
-                          type="text"
-                          value={newFileName}
-                          onChange={(e) => setNewFileName(e.target.value)}
-                          className="w-full px-4 py-3 bg-gray-800/30 border border-gray-700 text-white rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                          placeholder="Enter new file name"
-                          disabled={isProcessing}
+                    {/* Controls section */}
+                    <div className="flex-shrink-0 flex flex-col space-y-6 pb-2">
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                        <div>
+                          <input
+                            type="text"
+                            value={newFileName}
+                            onChange={(e) => setNewFileName(e.target.value)}
+                            className="
+                              w-full px-4 py-3 
+                              bg-gray-800/50 
+                              border border-gray-600 
+                              text-gray-100 
+                              rounded-lg 
+                              focus:ring-2 focus:ring-blue-500 focus:border-blue-500 
+                              disabled:opacity-50 disabled:cursor-not-allowed
+                              placeholder:text-gray-400
+                              hover:bg-gray-800/70 transition-colors
+                            "
+                            placeholder="Enter new name for the video file"
+                            disabled={isProcessing || videos.length === 0}
+                          />
+                        </div>
+
+                        <CategorySelector
+                          categories={categories}
+                          selectedCategory={selectedCategory}
+                          onSelectCategory={setSelectedCategory}
+                          onAddCategory={addCategory}
+                          disabled={isProcessing || videos.length === 0}
                         />
                       </div>
 
-                      <CategorySelector
-                        categories={categories}
-                        selectedCategory={selectedCategory}
-                        onSelectCategory={setSelectedCategory}
-                        onAddCategory={addCategory}
-                        disabled={isProcessing}
-                      />
-                    </div>
+                      <div className="flex justify-between items-center">
+                        <button
+                          onClick={handleNextVideo}
+                          disabled={isProcessing || currentVideoIndex >= videos.length - 1}
+                          className="
+                            px-6 py-3
+                            bg-gray-700 text-white 
+                            rounded-lg 
+                            hover:bg-gray-600 
+                            transition-colors
+                            flex items-center gap-2
+                            disabled:opacity-50 disabled:cursor-not-allowed
+                          "
+                        >
+                          <Forward className="w-5 h-5" />
+                          Next Video
+                        </button>
 
-                    <div className="flex justify-between mt-6">
-                      <button
-                        onClick={handleNextVideo}
-                        disabled={isProcessing || currentVideoIndex >= videos.length - 1}
-                        className="px-4 py-2 bg-gray-700 text-white rounded-lg hover:bg-gray-600 transition-colors flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed text-sm"
-                      >
-                        <Forward className="w-4 h-4" />
-                        Next Video
-                      </button>
-
-                      <button
-                        onClick={handleMoveVideo}
-                        disabled={isProcessing || !selectedCategory || !newFileName || !targetDir}
-                        className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-500 transition-colors flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed text-sm"
-                      >
-                        <Move className="w-4 h-4" />
-                        Move Video
-                      </button>
+                        <button
+                          onClick={handleMoveVideo}
+                          disabled={
+                            isProcessing || 
+                            videos.length === 0 || 
+                            !selectedCategory || 
+                            !newFileName
+                          }
+                          className="
+                            px-6 py-3
+                            bg-blue-600 text-white 
+                            rounded-lg 
+                            hover:bg-blue-700 
+                            transition-colors
+                            flex items-center gap-2
+                            disabled:opacity-50 disabled:cursor-not-allowed
+                          "
+                        >
+                          <Move className="w-5 h-5" />
+                          Move Video
+                        </button>
+                      </div>
                     </div>
                   </div>
                 )}
