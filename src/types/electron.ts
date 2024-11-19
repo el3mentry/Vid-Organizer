@@ -3,6 +3,7 @@ export interface VideoFile {
   path: string;
   size: number;
   nameWithoutExt: string;
+  createdAt: Date;
 }
 
 export interface ElectronAPI {

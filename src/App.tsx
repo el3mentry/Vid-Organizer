@@ -1,9 +1,10 @@
 import React, { useState, useEffect } from 'react';
-import { FolderOpen, Play, Forward, Save, Plus, Move } from 'lucide-react';
+import { FolderOpen, Play, Forward, Save, Plus, Move, FolderInput, FolderOutput } from 'lucide-react';
 import VideoPlayer from './components/VideoPlayer';
 import CategorySelector from './components/CategorySelector';
 import DirectorySelector from './components/DirectorySelector';
 import Notification from './components/Notification';
+import VideoList from './components/VideoList';
 import { VideoFile, ElectronAPI } from './types/electron';
 
 declare global {
@@ -12,16 +13,16 @@ declare global {
   }
 }
 
-function App() {
+const App: React.FC = () => {
   const [sourceDir, setSourceDir] = useState('');
   const [targetDir, setTargetDir] = useState('');
   const [videos, setVideos] = useState<VideoFile[]>([]);
   const [currentVideoIndex, setCurrentVideoIndex] = useState(0);
-  const [categories, setCategories] = useState<string[]>([]);
-  const [selectedCategory, setSelectedCategory] = useState('');
   const [newFileName, setNewFileName] = useState('');
+  const [selectedCategory, setSelectedCategory] = useState('');
+  const [categories, setCategories] = useState<string[]>([]);
   const [isProcessing, setIsProcessing] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+  const [error, setError] = useState<string | undefined>(undefined);
   const [showNotification, setShowNotification] = useState(false);
   const [notificationMessage, setNotificationMessage] = useState('');
 
@@ -50,7 +51,7 @@ function App() {
   };
 
   const scanDirectory = async (directory: string) => {
-    setError(null);
+    setError(undefined);
     setIsProcessing(true);
     setVideos([]); // Clear existing videos
     
@@ -79,7 +80,7 @@ function App() {
     if (!videos.length || currentVideoIndex >= videos.length) return;
     
     if (selectedCategory && newFileName) {
-      setError(null);
+      setError(undefined);
       setIsProcessing(true);
       try {
         const currentVideo = videos[currentVideoIndex];
@@ -146,7 +147,7 @@ function App() {
   };
 
   const addCategory = async (newCategory: string) => {
-    setError(null);
+    setError(undefined);
     try {
       const response = await fetch('http://localhost:3000/api/categories', {
         method: 'POST',
@@ -168,6 +169,19 @@ function App() {
     }
   };
 
+  const handleSourceDirSelect = async (dir: string) => {
+    setSourceDir(dir);
+    if (dir) {
+      setError(undefined);
+      await scanDirectory(dir);
+    }
+  };
+
+  const handleTargetDirSelect = (dir: string) => {
+    setError(undefined);
+    setTargetDir(dir);
+  };
+
   return (
     <div className="min-h-screen bg-gradient-to-br from-gray-900 to-gray-800 p-4">
       <div className="max-w-6xl mx-auto bg-white/10 backdrop-blur-lg rounded-xl shadow-2xl overflow-hidden">
@@ -183,94 +197,107 @@ function App() {
           </h1>
 
           {error && (
-            <div className="mb-6 p-3 bg-red-500/20 border border-red-500 rounded-lg text-red-100">
-              {error}
-            </div>
+            <div className="text-red-500 mb-4">{error}</div>
           )}
-
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
-            <DirectorySelector
-              label="Source Directory"
-              value={sourceDir}
-              onChange={(dir: string) => {
-                setSourceDir(dir);
-                if (dir) scanDirectory(dir);
-              }}
-              icon={FolderOpen}
-              disabled={isProcessing}
-            />
-            <DirectorySelector
-              label="Target Directory"
-              value={targetDir}
-              onChange={setTargetDir}
-              icon={FolderOpen}
-              disabled={isProcessing}
-            />
-          </div>
-
-          {isProcessing && (
-            <div className="flex justify-center items-center p-8">
-              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-white"></div>
+          
+          <div className="flex gap-6 h-[calc(100vh-12rem)]">
+            {/* Video Navigation Pane */}
+            <div className="w-64 flex-shrink-0">
+              <VideoList
+                videos={videos}
+                currentIndex={currentVideoIndex}
+                onSelect={setCurrentVideoIndex}
+              />
             </div>
-          )}
 
-          {videos.length > 0 && !isProcessing && (
-            <div className="space-y-6">
-              <div className="bg-gray-800/50 p-4 rounded-xl">
-                <h2 className="text-lg font-semibold text-white mb-3 flex items-center gap-2">
-                  Current Video: {getCurrentVideoName()}
-                </h2>
-                <div className="max-w-3xl mx-auto">
-                  <VideoPlayer
-                    src={getCurrentVideoPath()}
-                    className="w-full aspect-video bg-black rounded-lg"
-                  />
-                </div>
-              </div>
-
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                <div className="space-y-4">
-                  <label className="block text-lg font-medium text-white">New File Name</label>
-                  <input
-                    type="text"
-                    value={newFileName}
-                    onChange={(e) => setNewFileName(e.target.value)}
-                    className="w-full px-4 py-3 bg-gray-800/30 border border-gray-700 text-white rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                    placeholder="Enter new file name"
-                    disabled={isProcessing}
-                  />
-                </div>
-
-                <CategorySelector
-                  categories={categories}
-                  selectedCategory={selectedCategory}
-                  onSelectCategory={setSelectedCategory}
-                  onAddCategory={addCategory}
+            {/* Main Content */}
+            <div className="flex-1 flex flex-col gap-6">
+              <div className="grid grid-cols-2 gap-6">
+                <DirectorySelector
+                  label="Source Directory"
+                  icon={FolderInput}
+                  onSelect={handleSourceDirSelect}
+                  selectedPath={sourceDir}
+                  error={error}
+                  disabled={isProcessing}
+                />
+                <DirectorySelector
+                  label="Target Directory"
+                  icon={FolderOutput}
+                  onSelect={handleTargetDirSelect}
+                  selectedPath={targetDir}
+                  error={error}
                   disabled={isProcessing}
                 />
               </div>
 
-              <div className="flex justify-between mt-6">
-                <button
-                  onClick={handleNextVideo}
-                  disabled={isProcessing || currentVideoIndex >= videos.length - 1}
-                  className="px-4 py-2 bg-gray-700 text-white rounded-lg hover:bg-gray-600 transition-colors flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed text-sm"
-                >
-                  <Forward className="w-4 h-4" />
-                  Next Video
-                </button>
+              <div className="flex-1 bg-gray-800/50 backdrop-blur-md rounded-lg border border-gray-700 p-6">
+                {isProcessing && (
+                  <div className="flex justify-center items-center p-8">
+                    <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-white"></div>
+                  </div>
+                )}
 
-                <button
-                  onClick={handleMoveVideo}
-                  disabled={isProcessing || !selectedCategory || !newFileName || !targetDir}
-                  className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-500 transition-colors flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed text-sm"
-                >
-                  <Move className="w-4 h-4" />
-                  Move Video
-                </button>
+                {videos.length > 0 && !isProcessing && (
+                  <div className="space-y-6">
+                    <div className="bg-gray-800/50 p-4 rounded-xl">
+                      <h2 className="text-lg font-semibold text-white mb-3 flex items-center gap-2">
+                        Current Video: {getCurrentVideoName()}
+                      </h2>
+                      <div className="max-w-3xl mx-auto">
+                        <VideoPlayer
+                          src={getCurrentVideoPath()}
+                          className="w-full aspect-video bg-black rounded-lg"
+                        />
+                      </div>
+                    </div>
+
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                      <div className="space-y-4">
+                        <label className="block text-lg font-medium text-white">New File Name</label>
+                        <input
+                          type="text"
+                          value={newFileName}
+                          onChange={(e) => setNewFileName(e.target.value)}
+                          className="w-full px-4 py-3 bg-gray-800/30 border border-gray-700 text-white rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                          placeholder="Enter new file name"
+                          disabled={isProcessing}
+                        />
+                      </div>
+
+                      <CategorySelector
+                        categories={categories}
+                        selectedCategory={selectedCategory}
+                        onSelectCategory={setSelectedCategory}
+                        onAddCategory={addCategory}
+                        disabled={isProcessing}
+                      />
+                    </div>
+
+                    <div className="flex justify-between mt-6">
+                      <button
+                        onClick={handleNextVideo}
+                        disabled={isProcessing || currentVideoIndex >= videos.length - 1}
+                        className="px-4 py-2 bg-gray-700 text-white rounded-lg hover:bg-gray-600 transition-colors flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed text-sm"
+                      >
+                        <Forward className="w-4 h-4" />
+                        Next Video
+                      </button>
+
+                      <button
+                        onClick={handleMoveVideo}
+                        disabled={isProcessing || !selectedCategory || !newFileName || !targetDir}
+                        className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-500 transition-colors flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed text-sm"
+                      >
+                        <Move className="w-4 h-4" />
+                        Move Video
+                      </button>
+                    </div>
+                  </div>
+                )}
               </div>
             </div>
-          )}
+          </div>
         </div>
       </div>
     </div>

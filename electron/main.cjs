@@ -1,120 +1,89 @@
 const { app, BrowserWindow, ipcMain, dialog, protocol } = require('electron');
 const path = require('path');
-const url = require('url');
-const fs = require('fs').promises;
+const fs = require('fs/promises');
+const fsSync = require('fs');
+const isDev = process.env.NODE_ENV === 'development';
 
-let mainWindow = null;
+async function createWindow() {
+  const mainWindow = new BrowserWindow({
+    width: 1200,
+    height: 800,
+    webPreferences: {
+      contextIsolation: true,
+      nodeIntegration: false,
+      preload: path.join(__dirname, 'preload.cjs'),
+      webSecurity: true
+    }
+  });
 
-// Register custom protocol
-app.whenReady().then(() => {
-  protocol.registerFileProtocol('local-video', (request, callback) => {
-    const filePath = request.url.replace('local-video://', '');
+  if (isDev) {
+    mainWindow.loadURL('http://localhost:5173');
+    mainWindow.webContents.openDevTools();
+  } else {
+    mainWindow.loadFile('dist/index.html');
+  }
+}
+
+// Register custom protocol for video files
+function registerVideoProtocol() {
+  protocol.registerFileProtocol('video', (request, callback) => {
+    const filePath = decodeURIComponent(request.url.replace('video://', ''));
     try {
-      return callback({ path: decodeURIComponent(filePath) });
+      if (fsSync.existsSync(filePath)) {
+        return callback({ path: filePath });
+      } else {
+        console.error('Video file not found:', filePath);
+        callback({ error: -6 }); // File not found
+      }
     } catch (error) {
       console.error('Protocol error:', error);
-      callback({ error: -2 /* net::FAILED */ });
+      callback({ error: -2 }); // Failed
+    }
+  });
+}
+
+app.whenReady().then(() => {
+  registerVideoProtocol();
+  createWindow();
+
+  app.on('activate', () => {
+    if (BrowserWindow.getAllWindows().length === 0) {
+      createWindow();
     }
   });
 });
 
-const createWindow = () => {
-  // Create the browser window.
-  mainWindow = new BrowserWindow({
-    width: 1200,
-    height: 800,
-    webPreferences: {
-      nodeIntegration: false,
-      contextIsolation: true,
-      preload: path.join(__dirname, 'preload.cjs'),
-      webSecurity: true
-    },
-    show: false  // Don't show the window until it's ready
-  });
-
-  // Load the app
-  if (process.env.NODE_ENV === 'development') {
-    mainWindow.loadURL('http://localhost:5173').catch(console.error);
-    mainWindow.webContents.openDevTools();
-  } else {
-    mainWindow.loadURL(url.format({
-      pathname: path.join(__dirname, '../dist/index.html'),
-      protocol: 'file:',
-      slashes: true
-    })).catch(console.error);
-  }
-
-  // Show window when ready to render
-  mainWindow.once('ready-to-show', () => {
-    mainWindow.show();
-  });
-
-  // Handle window close
-  mainWindow.on('closed', () => {
-    mainWindow = null;
-  });
-
-  // Handle any renderer process crashes
-  mainWindow.webContents.on('render-process-gone', (event, details) => {
-    console.error('Renderer process gone:', details);
-  });
-
-  // Handle failed loads
-  mainWindow.webContents.on('did-fail-load', (event, errorCode, errorDescription) => {
-    console.error('Failed to load:', errorCode, errorDescription);
-  });
-};
-
-// This method will be called when Electron has finished initialization
-app.whenReady().then(createWindow);
-
-// Quit when all windows are closed.
 app.on('window-all-closed', () => {
   if (process.platform !== 'darwin') {
     app.quit();
   }
 });
 
-app.on('activate', () => {
-  if (mainWindow === null) {
-    createWindow();
-  }
-});
-
 // Handle directory selection
 ipcMain.handle('select-directory', async () => {
-  if (!mainWindow) {
-    throw new Error('Window is not available');
-  }
-
-  try {
-    const result = await dialog.showOpenDialog(mainWindow, {
-      properties: ['openDirectory']
-    });
-
-    if (result.canceled) {
-      return null;
-    }
-
+  const result = await dialog.showOpenDialog({
+    properties: ['openDirectory']
+  });
+  
+  if (!result.canceled) {
     return result.filePaths[0];
-  } catch (error) {
-    console.error('Error selecting directory:', error);
-    throw error;
   }
+  return null;
 });
 
 // Handle video scanning
 ipcMain.handle('scan-videos', async (event, directory) => {
   try {
     const files = await fs.readdir(directory);
-    const videoFiles = [];
     const videoExtensions = ['.mp4', '.mov', '.avi', '.mkv', '.webm'];
-
+    
+    const videoFiles = [];
     for (const file of files) {
+      const filePath = path.join(directory, file);
       try {
-        const filePath = path.join(directory, file);
-        const stats = await fs.stat(filePath);
-
+        // Use synchronous version for stats to avoid too many open handles
+        const stats = fsSync.statSync(filePath);
+        
         if (stats.isFile()) {
           const ext = path.extname(file).toLowerCase();
           if (videoExtensions.includes(ext)) {
@@ -122,7 +91,8 @@ ipcMain.handle('scan-videos', async (event, directory) => {
               name: file,
               path: filePath,
               size: stats.size,
-              nameWithoutExt: path.parse(file).name
+              nameWithoutExt: path.parse(file).name,
+              createdAt: stats.birthtime
             });
           }
         }
@@ -136,9 +106,4 @@ ipcMain.handle('scan-videos', async (event, directory) => {
     console.error('Error scanning videos:', error);
     throw error;
   }
-});
-
-// Handle getting filename without extension
-ipcMain.handle('get-filename-without-ext', async (event, filename) => {
-  return path.parse(filename).name;
 });
